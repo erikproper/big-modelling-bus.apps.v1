@@ -1,3 +1,0 @@
-TARGET="$(cat $GOPATH/src/big-modelling-bus.go.v1/current)"
-go get -u all
-go get github.com/erikproper/big-modelling-bus.go.v1@$TARGET
