@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"os"
 
@@ -11,7 +12,12 @@ import (
 )
 
 const (
-	defaultIni = "mobile.ini"
+	defaultIni = "config.ini"
+)
+
+var (
+	configFlag      = flag.String("config", defaultIni, "Configuration file")
+	reportLevelFlag = flag.Int("reporting", 1, "Reporting level")
 )
 
 func Pause() {
@@ -29,18 +35,16 @@ func ReportError(message string) {
 }
 
 func main() {
-	reporter := generics.CreateReporter(ReportError, ReportProgress)
+	flag.Parse()
 
-	config := defaultIni
-	if len(os.Args) > 1 {
-		config = os.Args[1]
-	}
+	reporter := generics.CreateReporter(*reportLevelFlag, ReportError, ReportProgress)
 
 	// Note: the config data can be used to contain config data for different aspects
-	configData := generics.LoadConfig(config, reporter)
+	configData := generics.LoadConfig(*configFlag, reporter)
 
 	// Note: One ModellingBusConnector can be used for different models of different kinds.
 	ModellingBusConnector := connect.CreateModellingBusConnector(configData, reporter)
+
 	//	ModellingBusConnector.DeleteEnvironment("experiment-12.10.2025")
 	//	ModellingBusConnector.DeleteEnvironment("")
 

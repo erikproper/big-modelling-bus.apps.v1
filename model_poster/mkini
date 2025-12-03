@@ -28,7 +28,7 @@ function MkIni {
   ) > $1.ini
 }
 
-MkIni mobile                    localhost               tester false false
+MkIni config                    localhost               tester false false
 MkIni home                      frame.fritz.box         tester false false
 MkIni tuwien                    dm-lab.big.tuwien.ac.at tester false true
 

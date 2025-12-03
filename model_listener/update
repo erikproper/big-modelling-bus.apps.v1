@@ -1,1 +1,2 @@
 go get -u all
+go get github.com/erikproper/big-modelling-bus.go.v1

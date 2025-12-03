@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,9 +14,20 @@ import (
 	"gopkg.in/ini.v1"
 )
 
+// //
+const (
+	defaultIni = "config.ini"
+)
+
+var (
+	configFlag      = flag.String("config", defaultIni, "Configuration file")
+	reportLevelFlag = flag.Int("reporting", 1, "Reporting level")
+)
+
+// //
+
 const (
 	latexFileExtension = ".tex"
-	defaultIni         = "mobile.ini"
 )
 
 type TCDMModelLaTeXWriter struct {
@@ -334,23 +346,20 @@ func ReportError(message string) {
 }
 
 func main() {
-	fmt.Println("LLLL")
-	reporter := generics.CreateReporter(ReportError, ReportProgress)
+	flag.Parse()
 
-	config := defaultIni
-	if len(os.Args) > 1 {
-		config = os.Args[1]
-	}
+	reporter := generics.CreateReporter(*reportLevelFlag, ReportError, ReportProgress)
 
 	// Note: the config data can be used to contain config data for different aspects
-	configData := generics.LoadConfig(config, reporter)
+	configData := generics.LoadConfig(*configFlag, reporter)
 
 	// Note: One ModellingBusConnector can be used for different models of different kinds.
 	ModellingBusConnector := connect.CreateModellingBusConnector(configData, reporter)
 
 	CDMModellingBusListener := cdm.CreateCDMListener(ModellingBusConnector)
 
-	CDMLaTeXWriter := CreateCDMLaTeXWriter(config, reporter)
+	////// NOT configFlah hee!!!
+	CDMLaTeXWriter := CreateCDMLaTeXWriter(*configFlag, reporter)
 	CDMLaTeXWriter.ListenForModelPostings(CDMModellingBusListener, "cdm-tester", "0001")
 
 	for {
