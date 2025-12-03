@@ -1,4 +1,4 @@
-module example/user/command_line
+module example/user/mbus_post
 
 go 1.24.0
 

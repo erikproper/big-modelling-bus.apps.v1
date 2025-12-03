@@ -1,30 +1,63 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/erikproper/big-modelling-bus.go.v1/connect"
 	"github.com/erikproper/big-modelling-bus.go.v1/generics"
-	"github.com/erikproper/big-modelling-bus.go.v1/languages/cdm"
-)
-
-const (
-	defaultIni = "config.ini"
 )
 
 var (
-	configFlag      = flag.String("config", defaultIni, "Configuration file")
-	reportLevelFlag = flag.Int("reporting", 1, "Reporting level")
+	modellingBusConnector connect.TModellingBusConnector
 )
 
-func Pause() {
-	fmt.Println("Press any key")
-	input := bufio.NewScanner(os.Stdin)
-	input.Scan()
+func handleRawArtefactPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Raw artefact posting")
 }
+
+func handleJSONArtefactPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "JSON artefact posting")
+}
+
+func handleObservationPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Observation posting")
+}
+
+func handleCoordinationPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Coordination posting")
+}
+
+const (
+	defaultIni = "config.ini"
+
+	rawArtefactPosting  = "raw_artefact"
+	jsonArtefactPosting = "json_artefact"
+	observationPosting  = "observation"
+	coordinationPosting = "coordination"
+)
+
+var (
+	postingHandlers = map[string]func(){
+		rawArtefactPosting:  handleRawArtefactPosting,
+		jsonArtefactPosting: handleJSONArtefactPosting,
+		observationPosting:  handleObservationPosting,
+		coordinationPosting: handleCoordinationPosting,
+	}
+
+	postingKindExplain = "Kind of posting to make. One of: " +
+		rawArtefactPosting + ", " +
+		jsonArtefactPosting + ", " +
+		observationPosting + ", or " +
+		coordinationPosting + "."
+
+	configFlag      = flag.String("config", defaultIni, "Configuration file")
+	reportLevelFlag = flag.Int("reporting", 1, "Reporting level")
+	topicFlag       = flag.String("topic", "", "Topic path")
+	postingKindFlag = flag.String("kind", "", postingKindExplain)
+	fileFlag        = flag.String("file", "", "File to post")
+	jsonFlag        = flag.String("json", "", "JSON content to post")
+)
 
 func ReportProgress(message string) {
 	fmt.Println("PROGRESS:", message)
@@ -38,79 +71,32 @@ func main() {
 	flag.Parse()
 
 	reporter := generics.CreateReporter(*reportLevelFlag, ReportError, ReportProgress)
-
-	// Note: the config data can be used to contain config data for different aspects
 	configData := generics.LoadConfig(*configFlag, reporter)
+	modellingBusConnector = connect.CreateModellingBusConnector(configData, reporter)
 
-	// Note: One ModellingBusConnector can be used for different models of different kinds.
-	ModellingBusConnector := connect.CreateModellingBusConnector(configData, reporter)
+	if len(*topicFlag) == 0 {
+		reporter.Error("No topic path specified.")
 
-	//	ModellingBusConnector.DeleteEnvironment("experiment-12.10.2025")
-	//	ModellingBusConnector.DeleteEnvironment("")
+		return
+	}
 
-	//		ModellingBusConnector.PostRawArtefact("context", "golang", "test", "main.go")
-	//		fmt.Println(ModellingBusConnector.GetRawArtefact("cdm-tester", "context", "golang", "test", "local.go"))
-	//		fmt.Println(ModellingBusConnector.GetRawArtefact("cdm-tester", "context", "golang", "test", "local.go"))
-	//		ModellingBusConnector.DeleteRawArtefact("context", "golang", "test.go")
+	if len(*postingKindFlag) == 0 {
+		reporter.Error("No posting kind specified.")
 
-	// Note that the 0001 is for local use. No issue to e.g. make this into 0001/02 to indicate version numbers
-	CDMModellingBusPoster := cdm.CreateCDMPoster(ModellingBusConnector, "0001")
+		return
+	}
 
-	CDMModellingBusPoster.SetModelName("Empty university")
+	if postingHandler, postingKindExists := postingHandlers[*postingKindFlag]; !postingKindExists {
+		reporter.Error("Unknown posting kind specified: %s. %s", *postingKindFlag, postingKindExplain)
 
-	fmt.Println("1) empty model")
-	CDMModellingBusPoster.PostState()
-	fmt.Println("Posted state")
-	Pause()
+		return
+	} else {
+		postingHandler()
+	}
 
-	Student := CDMModellingBusPoster.AddConcreteIndividualType("Student")
-	StudyProgramme := CDMModellingBusPoster.AddConcreteIndividualType("Study Programme")
-	StudentName := CDMModellingBusPoster.AddQualityType("Student Name", "string")
-	StudyProgrammeName := CDMModellingBusPoster.AddQualityType("Study Programme Name", "string")
-	CDMModellingBusPoster.SetModelName("Basic university")
-
-	fmt.Println("2) basic model")
-	CDMModellingBusPoster.PostUpdate()
-	fmt.Println("Posted update")
-	Pause()
-
-	fmt.Println("3) basic model")
-	CDMModellingBusPoster.PostState()
-	fmt.Println("Posted state")
-	Pause()
-
-	StudyProgrammeStudied := CDMModellingBusPoster.AddInvolvementType("studied by", StudyProgramme)
-	StudentStudying := CDMModellingBusPoster.AddInvolvementType("studying", Student)
-	Studies := CDMModellingBusPoster.AddRelationType("Studies", StudyProgrammeStudied, StudentStudying)
-	CDMModellingBusPoster.AddRelationTypeReading(Studies, "", StudentStudying, "studies", StudyProgrammeStudied, "")
-	CDMModellingBusPoster.AddRelationTypeReading(Studies, "", StudyProgrammeStudied, "studied by", StudentStudying, "")
-
-	StudentReferred := CDMModellingBusPoster.AddInvolvementType("referred", Student)
-	StudentNameReferring := CDMModellingBusPoster.AddInvolvementType("referring", StudentName)
-	StudentNaming := CDMModellingBusPoster.AddRelationType("Student Naming", StudentReferred, StudentNameReferring)
-	CDMModellingBusPoster.AddRelationTypeReading(StudentNaming, "", StudentReferred, "has", StudentNameReferring, "")
-	CDMModellingBusPoster.AddRelationTypeReading(StudentNaming, "", StudentNameReferring, "of", StudentReferred, "")
-
-	StudyProgrammeReferred := CDMModellingBusPoster.AddInvolvementType("referred", StudyProgramme)
-	StudyProgrammeNameReferring := CDMModellingBusPoster.AddInvolvementType("referring", StudyProgrammeName)
-	StudyProgrammeNaming := CDMModellingBusPoster.AddRelationType("Programme Naming", StudyProgrammeReferred, StudyProgrammeNameReferring)
-	CDMModellingBusPoster.AddRelationTypeReading(StudyProgrammeNaming, "", StudyProgrammeReferred, "goes by", StudyProgrammeNameReferring, "")
-	CDMModellingBusPoster.AddRelationTypeReading(StudyProgrammeNaming, "", StudyProgrammeNameReferring, "of", StudyProgrammeReferred, "")
-	CDMModellingBusPoster.SetModelName("University")
-
-	fmt.Println("4) larger model")
-	CDMModellingBusPoster.PostUpdate()
-	fmt.Println("Posted update")
-	Pause()
-
-	// Reference modes
-
-	// CONSTRAINTS
-	//
-	// always do a push_model after a read from local FS!
-	// push_model
-	// push_update
-
-	fmt.Println("5) final model")
-	CDMModellingBusPoster.PostState()
+	fmt.Println("T", *topicFlag)
+	fmt.Println("K", *postingKindFlag)
+	fmt.Println("F", *fileFlag)
+	fmt.Println("J", *jsonFlag)
+	fmt.Println(modellingBusConnector)
 }
