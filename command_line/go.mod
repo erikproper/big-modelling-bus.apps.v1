@@ -1,4 +1,4 @@
-module example/user/model_poster
+module example/user/command_line
 
 go 1.24.0
 
