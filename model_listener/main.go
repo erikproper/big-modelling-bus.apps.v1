@@ -314,7 +314,7 @@ func CreateCDMLaTeXWriter(config string, reporter *generics.TReporter) TCDMModel
 	return CDMModelLaTeXWriter
 }
 
-func (l *TCDMModelLaTeXWriter) UpdateRendering(CDMModellingBusListener connect.TModellingBusArtefactConnector, message string) {
+func (l *TCDMModelLaTeXWriter) UpdateRendering(CDMModellingBusListener connect.TModellingBusJSONArtefactConnector, message string) {
 	l.reporter.Progress(generics.ProgressLevelBasic, "%s", message)
 	l.CurrentModel.GetStateFromBus(CDMModellingBusListener)
 	l.UpdatedModel.GetUpdatedFromBus(CDMModellingBusListener)
@@ -323,7 +323,7 @@ func (l *TCDMModelLaTeXWriter) UpdateRendering(CDMModellingBusListener connect.T
 	l.CreatePDF()
 }
 
-func (l *TCDMModelLaTeXWriter) ListenForModelPostings(CDMModellingBusListener connect.TModellingBusArtefactConnector, agentId, modelID string) {
+func (l *TCDMModelLaTeXWriter) ListenForModelPostings(CDMModellingBusListener connect.TModellingBusJSONArtefactConnector, agentId, modelID string) {
 	CDMModellingBusListener.ListenForStatePostings(agentId, modelID, func() {
 		l.UpdateRendering(CDMModellingBusListener, "Received state.")
 	})

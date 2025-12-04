@@ -3,30 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/erikproper/big-modelling-bus.go.v1/connect"
 	"github.com/erikproper/big-modelling-bus.go.v1/generics"
 )
-
-var (
-	modellingBusConnector connect.TModellingBusConnector
-)
-
-func handleRawArtefactPosting() {
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Raw artefact posting")
-}
-
-func handleJSONArtefactPosting() {
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "JSON artefact posting")
-}
-
-func handleObservationPosting() {
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Observation posting")
-}
-
-func handleCoordinationPosting() {
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Coordination posting")
-}
 
 const (
 	defaultIni = "config.ini"
@@ -38,6 +19,8 @@ const (
 )
 
 var (
+	modellingBusConnector connect.TModellingBusConnector
+
 	postingHandlers = map[string]func(){
 		rawArtefactPosting:  handleRawArtefactPosting,
 		jsonArtefactPosting: handleJSONArtefactPosting,
@@ -57,7 +40,62 @@ var (
 	postingKindFlag = flag.String("kind", "", postingKindExplain)
 	fileFlag        = flag.String("file", "", "File to post")
 	jsonFlag        = flag.String("json", "", "JSON content to post")
+	jsonVersionFlag = flag.String("json_version", "", "JSON version of JSON artefact content.")
+	artefactIDFlag  = flag.String("artefact_id", "", "Artefact ID of JSON artefact content.")
 )
+
+func handleRawArtefactPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Raw artefact posting")
+
+	if len(*fileFlag) == 0 {
+		modellingBusConnector.Reporter.Error("No file specified for raw artefact posting.")
+
+		return
+	} else {
+		modellingBusConnector.PostRawArtefact(*topicFlag, *fileFlag)
+	}
+}
+
+func handleJSONArtefactPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "JSON artefact posting")
+
+	if len(*jsonVersionFlag) == 0 {
+		modellingBusConnector.Reporter.Error("No JSON version specified for JSON artefact posting.")
+
+		return
+	}
+
+	if len(*artefactIDFlag) == 0 {
+		modellingBusConnector.Reporter.Error("No artefact ID specified for JSON artefact posting.")
+
+		return
+	}
+
+	modellingBusJSONPoster := connect.CreateModellingBusJSONArtefactConnector(modellingBusConnector, *jsonVersionFlag)
+
+	modellingBusJSONPoster.PrepareForPosting(*artefactIDFlag)
+
+	if len(*jsonFlag) > 0 {
+		modellingBusJSONPoster.PostState([]byte(*jsonFlag), nil)
+	} else if len(*fileFlag) > 0 {
+		jsonPayload, err := os.ReadFile(*fileFlag)
+		if err != nil {
+			modellingBusConnector.Reporter.Error("Error reading file for JSON artefact posting. %s", err)
+
+			return
+		} else {
+			modellingBusJSONPoster.PostState(jsonPayload, nil)
+		}
+	}
+}
+
+func handleObservationPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Observation posting")
+}
+
+func handleCoordinationPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Coordination posting")
+}
 
 func ReportProgress(message string) {
 	fmt.Println("PROGRESS:", message)
@@ -86,17 +124,19 @@ func main() {
 		return
 	}
 
-	if postingHandler, postingKindExists := postingHandlers[*postingKindFlag]; !postingKindExists {
-		reporter.Error("Unknown posting kind specified: %s. %s", *postingKindFlag, postingKindExplain)
+	if len(*fileFlag) == 0 && len(*jsonFlag) == 0 {
+		modellingBusConnector.Reporter.Error("Need file or JSON record.")
 
 		return
-	} else {
-		postingHandler()
 	}
 
-	fmt.Println("T", *topicFlag)
-	fmt.Println("K", *postingKindFlag)
-	fmt.Println("F", *fileFlag)
-	fmt.Println("J", *jsonFlag)
-	fmt.Println(modellingBusConnector)
+	postingHandler := postingHandlers[*postingKindFlag]
+
+	if postingHandler == nil {
+		reporter.Error("Unknown posting kind specified: %s.", *postingKindFlag)
+
+		return
+	}
+
+	postingHandler()
 }
