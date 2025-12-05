@@ -28,16 +28,13 @@ function MkIni {
   ) > $1.ini
 }
 
-MkIni model_poster/config   localhost               tester false false
-MkIni model_poster/home     frame.fritz.box         tester false false
-MkIni model_poster/tuwien   dm-lab.big.tuwien.ac.at tester false true
-
-MkIni command_line/config   localhost               cmd false false
-MkIni command_line/home     frame.fritz.box         cmd false false
-MkIni command_line/tuwien   dm-lab.big.tuwien.ac.at cmd false true
+for m in model_poster mbus_post; do
+  MkIni $m/config   localhost               tester false false
+  MkIni $m/home     frame.fritz.box         tester false false
+  MkIni $m/tuwien   dm-lab.big.tuwien.ac.at tester false true
+done
 
 MkIni model_listener/config  localhost               listener false false
-
 MkIni model_listener/home1   frame.fritz.box         home-1 false false
 MkIni model_listener/home2   frame.fritz.box         home-2 false false
 MkIni model_listener/home3   frame.fritz.box         home-3 false false

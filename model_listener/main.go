@@ -10,7 +10,7 @@ import (
 
 	"github.com/erikproper/big-modelling-bus.go.v1/connect"
 	"github.com/erikproper/big-modelling-bus.go.v1/generics"
-	"github.com/erikproper/big-modelling-bus.go.v1/languages/cdm"
+	"github.com/erikproper/big-modelling-bus.go.v1/languages/cdm_v1"
 	"gopkg.in/ini.v1"
 )
 
@@ -33,7 +33,7 @@ const (
 type TCDMModelLaTeXWriter struct {
 	CurrentModel,
 	UpdatedModel,
-	ConsideredModel cdm.TCDMModel
+	ConsideredModel cdm_v1.TCDMModel
 
 	CurrentReadings,
 	UpdatedReadings,
@@ -51,7 +51,7 @@ type TCDMModelLaTeXWriter struct {
  *  Aggregate data across the model versions
  */
 
-func (l *TCDMModelLaTeXWriter) MergeIDSets(mp func(cdm.TCDMModel) map[string]bool) map[string]bool {
+func (l *TCDMModelLaTeXWriter) MergeIDSets(mp func(cdm_v1.TCDMModel) map[string]bool) map[string]bool {
 	result := map[string]bool{}
 
 	for e, c := range mp(l.CurrentModel) {
@@ -76,31 +76,31 @@ func (l *TCDMModelLaTeXWriter) MergeIDSets(mp func(cdm.TCDMModel) map[string]boo
 }
 
 func (l *TCDMModelLaTeXWriter) QualityTypes() map[string]bool {
-	return l.MergeIDSets(func(m cdm.TCDMModel) map[string]bool {
+	return l.MergeIDSets(func(m cdm_v1.TCDMModel) map[string]bool {
 		return m.QualityTypes
 	})
 }
 
 func (l *TCDMModelLaTeXWriter) ConcreteIndividualTypes() map[string]bool {
-	return l.MergeIDSets(func(m cdm.TCDMModel) map[string]bool {
+	return l.MergeIDSets(func(m cdm_v1.TCDMModel) map[string]bool {
 		return m.ConcreteIndividualTypes
 	})
 }
 
 func (l *TCDMModelLaTeXWriter) RelationTypes() map[string]bool {
-	return l.MergeIDSets(func(m cdm.TCDMModel) map[string]bool {
+	return l.MergeIDSets(func(m cdm_v1.TCDMModel) map[string]bool {
 		return m.RelationTypes
 	})
 }
 
 func (l *TCDMModelLaTeXWriter) InvolvementTypesOfRelationType(relationType string) map[string]bool {
-	return l.MergeIDSets(func(m cdm.TCDMModel) map[string]bool {
+	return l.MergeIDSets(func(m cdm_v1.TCDMModel) map[string]bool {
 		return m.InvolvementTypesOfRelationType[relationType]
 	})
 }
 
 func (l *TCDMModelLaTeXWriter) AlternativeReadingsOfRelationType(relationType string) map[string]bool {
-	return l.MergeIDSets(func(m cdm.TCDMModel) map[string]bool {
+	return l.MergeIDSets(func(m cdm_v1.TCDMModel) map[string]bool {
 		return m.AlternativeReadingsOfRelationType[relationType]
 	})
 }
@@ -124,7 +124,7 @@ func ApplyFormatting(format, value string) string {
 	}
 }
 
-func (l *TCDMModelLaTeXWriter) RenderElement(s func(cdm.TCDMModel) string) string {
+func (l *TCDMModelLaTeXWriter) RenderElement(s func(cdm_v1.TCDMModel) string) string {
 	current := s(l.CurrentModel)
 	updated := s(l.UpdatedModel)
 	considered := s(l.ConsideredModel)
@@ -145,30 +145,30 @@ func (l *TCDMModelLaTeXWriter) RenderElement(s func(cdm.TCDMModel) string) strin
 }
 
 func (l *TCDMModelLaTeXWriter) RenderModelName() string {
-	return l.RenderElement(func(m cdm.TCDMModel) string {
+	return l.RenderElement(func(m cdm_v1.TCDMModel) string {
 		return m.ModelName
 	})
 }
 
 func (l *TCDMModelLaTeXWriter) RenderTypeNameOfBaseTypeOfInvolvementType(involvementType string) string {
-	return l.RenderElement(func(m cdm.TCDMModel) string {
+	return l.RenderElement(func(m cdm_v1.TCDMModel) string {
 		return m.TypeName[m.BaseTypeOfInvolvementType[involvementType]]
 	})
 }
 
 func (l *TCDMModelLaTeXWriter) RenderDomainNameOfQualityType(typeID string) string {
-	return l.RenderElement(func(m cdm.TCDMModel) string {
+	return l.RenderElement(func(m cdm_v1.TCDMModel) string {
 		return m.DomainOfQualityType[typeID]
 	})
 }
 
 func (l *TCDMModelLaTeXWriter) RenderTypeName(typeID string) string {
-	return l.RenderElement(func(m cdm.TCDMModel) string {
+	return l.RenderElement(func(m cdm_v1.TCDMModel) string {
 		return m.TypeName[typeID]
 	})
 }
 
-func (l *TCDMModelLaTeXWriter) RenderModelRelationTypeReading(m cdm.TCDMModel, reading string) string {
+func (l *TCDMModelLaTeXWriter) RenderModelRelationTypeReading(m cdm_v1.TCDMModel, reading string) string {
 	readingString := ""
 	for involvementPosition, involvementType := range m.ReadingDefinition[reading].InvolvementTypes {
 		if involvementPosition == 0 {
@@ -183,13 +183,13 @@ func (l *TCDMModelLaTeXWriter) RenderModelRelationTypeReading(m cdm.TCDMModel, r
 }
 
 func (l *TCDMModelLaTeXWriter) RenderPrimaryRelationTypeReading(relationTypeID string) string {
-	return l.RenderElement(func(m cdm.TCDMModel) string {
+	return l.RenderElement(func(m cdm_v1.TCDMModel) string {
 		return l.RenderModelRelationTypeReading(m, m.PrimaryReadingOfRelationType[relationTypeID])
 	})
 }
 
 func (l *TCDMModelLaTeXWriter) RenderRelationTypeReading(reading string) string {
-	return l.RenderElement(func(m cdm.TCDMModel) string {
+	return l.RenderElement(func(m cdm_v1.TCDMModel) string {
 		return l.RenderModelRelationTypeReading(m, reading)
 	})
 }
@@ -302,9 +302,9 @@ func (l *TCDMModelLaTeXWriter) Initialise(config string, reporter *generics.TRep
 	l.workFolder = cfg.Section("").Key("work_folder").String()
 	l.latexFile = cfg.Section("").Key("latex").String()
 
-	l.CurrentModel = cdm.CreateCDMModel()
-	l.UpdatedModel = cdm.CreateCDMModel()
-	l.ConsideredModel = cdm.CreateCDMModel()
+	l.CurrentModel = cdm_v1.CreateCDMModel()
+	l.UpdatedModel = cdm_v1.CreateCDMModel()
+	l.ConsideredModel = cdm_v1.CreateCDMModel()
 }
 
 func CreateCDMLaTeXWriter(config string, reporter *generics.TReporter) TCDMModelLaTeXWriter {
@@ -314,7 +314,7 @@ func CreateCDMLaTeXWriter(config string, reporter *generics.TReporter) TCDMModel
 	return CDMModelLaTeXWriter
 }
 
-func (l *TCDMModelLaTeXWriter) UpdateRendering(CDMModellingBusListener connect.TModellingBusJSONArtefactConnector, message string) {
+func (l *TCDMModelLaTeXWriter) UpdateRendering(CDMModellingBusListener connect.TModellingBusArtefactConnector, message string) {
 	l.reporter.Progress(generics.ProgressLevelBasic, "%s", message)
 	l.CurrentModel.GetStateFromBus(CDMModellingBusListener)
 	l.UpdatedModel.GetUpdatedFromBus(CDMModellingBusListener)
@@ -323,16 +323,16 @@ func (l *TCDMModelLaTeXWriter) UpdateRendering(CDMModellingBusListener connect.T
 	l.CreatePDF()
 }
 
-func (l *TCDMModelLaTeXWriter) ListenForModelPostings(CDMModellingBusListener connect.TModellingBusJSONArtefactConnector, agentId, modelID string) {
-	CDMModellingBusListener.ListenForStatePostings(agentId, modelID, func() {
+func (l *TCDMModelLaTeXWriter) ListenForModelPostings(CDMModellingBusListener connect.TModellingBusArtefactConnector, agentId, modelID string) {
+	CDMModellingBusListener.ListenForJSONArtefactStatePostings(agentId, modelID, func() {
 		l.UpdateRendering(CDMModellingBusListener, "Received state.")
 	})
 
-	CDMModellingBusListener.ListenForUpdatePostings(agentId, modelID, func() {
+	CDMModellingBusListener.ListenForJSONArtefactUpdatePostings(agentId, modelID, func() {
 		l.UpdateRendering(CDMModellingBusListener, "Received update.")
 	})
 
-	CDMModellingBusListener.ListenForConsideringPostings(agentId, modelID, func() {
+	CDMModellingBusListener.ListenForJSONArtefactConsideringPostings(agentId, modelID, func() {
 		l.UpdateRendering(CDMModellingBusListener, "Received considered.")
 	})
 }
@@ -354,9 +354,9 @@ func main() {
 	configData := generics.LoadConfig(*configFlag, reporter)
 
 	// Note: One ModellingBusConnector can be used for different models of different kinds.
-	ModellingBusConnector := connect.CreateModellingBusConnector(configData, reporter)
+	ModellingBusConnector := connect.CreateModellingBusConnector(configData, reporter, !connect.PostingOnly)
 
-	CDMModellingBusListener := cdm.CreateCDMListener(ModellingBusConnector)
+	CDMModellingBusListener := cdm_v1.CreateCDMListener(ModellingBusConnector)
 
 	////// NOT configFlah hee!!!
 	CDMLaTeXWriter := CreateCDMLaTeXWriter(*configFlag, reporter)

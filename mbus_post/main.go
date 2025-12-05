@@ -12,26 +12,32 @@ import (
 const (
 	defaultIni = "config.ini"
 
-	rawArtefactPosting  = "raw_artefact"
-	jsonArtefactPosting = "json_artefact"
-	observationPosting  = "observation"
-	coordinationPosting = "coordination"
+	rawArtefactPosting         = "raw_artefact"
+	jsonArtefactPosting        = "json_artefact"
+	rawObservationPosting      = "raw_observation"
+	jsonObservationPosting     = "json_observation"
+	streamedObservationPosting = "streamed_observation"
+	coordinationPosting        = "coordination"
 )
 
 var (
 	modellingBusConnector connect.TModellingBusConnector
 
 	postingHandlers = map[string]func(){
-		rawArtefactPosting:  handleRawArtefactPosting,
-		jsonArtefactPosting: handleJSONArtefactPosting,
-		observationPosting:  handleObservationPosting,
-		coordinationPosting: handleCoordinationPosting,
+		rawArtefactPosting:         handleRawArtefactPosting,
+		jsonArtefactPosting:        handleJSONArtefactPosting,
+		rawObservationPosting:      handleRawObservationPosting,
+		jsonObservationPosting:     handleJSONObservationPosting,
+		streamedObservationPosting: handleStreamedObservationPosting,
+		coordinationPosting:        handleCoordinationPosting,
 	}
 
 	postingKindExplain = "Kind of posting to make. One of: " +
 		rawArtefactPosting + ", " +
 		jsonArtefactPosting + ", " +
-		observationPosting + ", or " +
+		rawObservationPosting + ", " +
+		jsonObservationPosting + ", " +
+		streamedObservationPosting + ", or " +
 		coordinationPosting + "."
 
 	configFlag      = flag.String("config", defaultIni, "Configuration file")
@@ -44,16 +50,45 @@ var (
 	artefactIDFlag  = flag.String("artefact_id", "", "Artefact ID of JSON artefact content.")
 )
 
+func ReportProgress(message string) {
+	fmt.Println("PROGRESS:", message)
+}
+
+func ReportError(message string) {
+	fmt.Println("ERROR:", message)
+}
+
+func getJSONPayload() ([]byte, bool) {
+	jsonPayload := []byte(*jsonFlag)
+
+	if len(*fileFlag) > 0 {
+		err := error(nil)
+		jsonPayload, err = os.ReadFile(*fileFlag)
+
+		if err != nil {
+			modellingBusConnector.Reporter.Error("Error reading file for JSON artefact posting. %s", err)
+
+			return jsonPayload, false
+		}
+	}
+
+	return jsonPayload, true
+}
+
 func handleRawArtefactPosting() {
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Raw artefact posting")
+
+	modellingBusArtefactPoster := connect.CreateModellingBusArtefactConnector(modellingBusConnector, *jsonVersionFlag)
+
+	modellingBusArtefactPoster.PrepareForPosting(*artefactIDFlag)
 
 	if len(*fileFlag) == 0 {
 		modellingBusConnector.Reporter.Error("No file specified for raw artefact posting.")
 
 		return
-	} else {
-		modellingBusConnector.PostRawArtefact(*topicFlag, *fileFlag)
 	}
+
+	modellingBusArtefactPoster.PostRawArtefactState(*topicFlag, *fileFlag)
 }
 
 func handleJSONArtefactPosting() {
@@ -71,38 +106,49 @@ func handleJSONArtefactPosting() {
 		return
 	}
 
-	modellingBusJSONPoster := connect.CreateModellingBusJSONArtefactConnector(modellingBusConnector, *jsonVersionFlag)
+	modellingBusArtefactPoster := connect.CreateModellingBusArtefactConnector(modellingBusConnector, *jsonVersionFlag)
 
-	modellingBusJSONPoster.PrepareForPosting(*artefactIDFlag)
+	modellingBusArtefactPoster.PrepareForPosting(*artefactIDFlag)
 
-	if len(*jsonFlag) > 0 {
-		modellingBusJSONPoster.PostState([]byte(*jsonFlag), nil)
-	} else if len(*fileFlag) > 0 {
-		jsonPayload, err := os.ReadFile(*fileFlag)
-		if err != nil {
-			modellingBusConnector.Reporter.Error("Error reading file for JSON artefact posting. %s", err)
-
-			return
-		} else {
-			modellingBusJSONPoster.PostState(jsonPayload, nil)
-		}
+	if jsonPayload, ok := getJSONPayload(); ok {
+		modellingBusArtefactPoster.PostJSONArtefactState(jsonPayload, nil)
 	}
 }
 
-func handleObservationPosting() {
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Observation posting")
+func handleRawObservationPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Raw observation posting")
+
+	if len(*fileFlag) == 0 {
+		modellingBusConnector.Reporter.Error("No file specified for raw artefact posting.")
+
+		return
+	}
+
+	modellingBusConnector.PostRawObservation(*topicFlag, *fileFlag)
+}
+
+func handleJSONObservationPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "JSON observation posting")
+
+	if jsonPayload, ok := getJSONPayload(); ok {
+		modellingBusConnector.PostJSONObservation(*topicFlag, jsonPayload)
+	}
+}
+
+func handleStreamedObservationPosting() {
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "JSON observation posting")
+
+	if jsonPayload, ok := getJSONPayload(); ok {
+		modellingBusConnector.PostStreamedObservation(*topicFlag, jsonPayload)
+	}
 }
 
 func handleCoordinationPosting() {
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Coordination posting")
-}
 
-func ReportProgress(message string) {
-	fmt.Println("PROGRESS:", message)
-}
-
-func ReportError(message string) {
-	fmt.Println("ERROR:", message)
+	if jsonPayload, ok := getJSONPayload(); ok {
+		modellingBusConnector.PostCoordination(*topicFlag, jsonPayload)
+	}
 }
 
 func main() {
@@ -110,7 +156,7 @@ func main() {
 
 	reporter := generics.CreateReporter(*reportLevelFlag, ReportError, ReportProgress)
 	configData := generics.LoadConfig(*configFlag, reporter)
-	modellingBusConnector = connect.CreateModellingBusConnector(configData, reporter)
+	modellingBusConnector = connect.CreateModellingBusConnector(configData, reporter, connect.PostingOnly)
 
 	if len(*topicFlag) == 0 {
 		reporter.Error("No topic path specified.")
@@ -120,12 +166,6 @@ func main() {
 
 	if len(*postingKindFlag) == 0 {
 		reporter.Error("No posting kind specified.")
-
-		return
-	}
-
-	if len(*fileFlag) == 0 && len(*jsonFlag) == 0 {
-		modellingBusConnector.Reporter.Error("Need file or JSON record.")
 
 		return
 	}

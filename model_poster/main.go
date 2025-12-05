@@ -8,7 +8,7 @@ import (
 
 	"github.com/erikproper/big-modelling-bus.go.v1/connect"
 	"github.com/erikproper/big-modelling-bus.go.v1/generics"
-	"github.com/erikproper/big-modelling-bus.go.v1/languages/cdm"
+	"github.com/erikproper/big-modelling-bus.go.v1/languages/cdm_v1"
 )
 
 const (
@@ -43,7 +43,7 @@ func main() {
 	configData := generics.LoadConfig(*configFlag, reporter)
 
 	// Note: One ModellingBusConnector can be used for different models of different kinds.
-	ModellingBusConnector := connect.CreateModellingBusConnector(configData, reporter)
+	ModellingBusConnector := connect.CreateModellingBusConnector(configData, reporter, connect.PostingOnly)
 
 	//	ModellingBusConnector.DeleteEnvironment("experiment-12.10.2025")
 	//	ModellingBusConnector.DeleteEnvironment("")
@@ -54,7 +54,7 @@ func main() {
 	//		ModellingBusConnector.DeleteRawArtefact("context", "golang", "test.go")
 
 	// Note that the 0001 is for local use. No issue to e.g. make this into 0001/02 to indicate version numbers
-	CDMModellingBusPoster := cdm.CreateCDMPoster(ModellingBusConnector, "0001")
+	CDMModellingBusPoster := cdm_v1.CreateCDMPoster(ModellingBusConnector, "0001")
 
 	CDMModellingBusPoster.SetModelName("Empty university")
 

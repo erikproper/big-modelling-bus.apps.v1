@@ -3,7 +3,7 @@ module example/user/model_listener
 go 1.24.0
 
 require (
-	github.com/erikproper/big-modelling-bus.go.v1 v1.0.10
+	github.com/erikproper/big-modelling-bus.go.v1 v1.0.19
 	gopkg.in/ini.v1 v1.67.0
 )
 
