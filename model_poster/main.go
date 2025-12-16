@@ -8,7 +8,7 @@ import (
 
 	"github.com/erikproper/big-modelling-bus.go.v1/connect"
 	"github.com/erikproper/big-modelling-bus.go.v1/generics"
-	"github.com/erikproper/big-modelling-bus.go.v1/languages/cdm_v1"
+	cdm "github.com/erikproper/big-modelling-bus.go.v1/languages/cdm/cdm_v1_0_v1_0"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 
 var (
 	configFlag      = flag.String("config", defaultIni, "Configuration file")
-	reportLevelFlag = flag.Int("reporting", 1, "Reporting level")
+	reportLevelFlag = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level")
 )
 
 func Pause() {
@@ -54,52 +54,53 @@ func main() {
 	//		ModellingBusConnector.DeleteRawArtefact("context", "golang", "test.go")
 
 	// Note that the 0001 is for local use. No issue to e.g. make this into 0001/02 to indicate version numbers
-	CDMModellingBusPoster := cdm_v1.CreateCDMPoster(ModellingBusConnector, "0001")
+	CDMModellingBusPoster := cdm.CreateCDMPoster(ModellingBusConnector, "0001")
 
-	CDMModellingBusPoster.SetModelName("Empty university")
+	CDMModel := cdm.CreateCDMModel(reporter)
+	CDMModel.SetModelName("Empty university")
 
 	fmt.Println("1) empty model")
-	CDMModellingBusPoster.PostState()
+	CDMModellingBusPoster.PostState(CDMModel)
 	fmt.Println("Posted state")
 	Pause()
 
-	Student := CDMModellingBusPoster.AddConcreteIndividualType("Student")
-	StudyProgramme := CDMModellingBusPoster.AddConcreteIndividualType("Study Programme")
-	StudentName := CDMModellingBusPoster.AddQualityType("Student Name", "string")
-	StudyProgrammeName := CDMModellingBusPoster.AddQualityType("Study Programme Name", "string")
-	CDMModellingBusPoster.SetModelName("Basic university")
+	Student := CDMModel.AddConcreteIndividualType("Student")
+	StudyProgramme := CDMModel.AddConcreteIndividualType("Study Programme")
+	StudentName := CDMModel.AddQualityType("Student Name", "string")
+	StudyProgrammeName := CDMModel.AddQualityType("Study Programme Name", "string")
+	CDMModel.SetModelName("Basic university")
 
 	fmt.Println("2) basic model")
-	CDMModellingBusPoster.PostUpdate()
+	CDMModellingBusPoster.PostUpdate(CDMModel)
 	fmt.Println("Posted update")
 	Pause()
 
 	fmt.Println("3) basic model")
-	CDMModellingBusPoster.PostState()
+	CDMModellingBusPoster.PostState(CDMModel)
 	fmt.Println("Posted state")
 	Pause()
 
-	StudyProgrammeStudied := CDMModellingBusPoster.AddInvolvementType("studied by", StudyProgramme)
-	StudentStudying := CDMModellingBusPoster.AddInvolvementType("studying", Student)
-	Studies := CDMModellingBusPoster.AddRelationType("Studies", StudyProgrammeStudied, StudentStudying)
-	CDMModellingBusPoster.AddRelationTypeReading(Studies, "", StudentStudying, "studies", StudyProgrammeStudied, "")
-	CDMModellingBusPoster.AddRelationTypeReading(Studies, "", StudyProgrammeStudied, "studied by", StudentStudying, "")
+	StudyProgrammeStudied := CDMModel.AddInvolvementType("studied by", StudyProgramme)
+	StudentStudying := CDMModel.AddInvolvementType("studying", Student)
+	Studies := CDMModel.AddRelationType("Studies", StudyProgrammeStudied, StudentStudying)
+	CDMModel.AddRelationTypeReading(Studies, "", StudentStudying, "studies", StudyProgrammeStudied, "")
+	CDMModel.AddRelationTypeReading(Studies, "", StudyProgrammeStudied, "studied by", StudentStudying, "")
 
-	StudentReferred := CDMModellingBusPoster.AddInvolvementType("referred", Student)
-	StudentNameReferring := CDMModellingBusPoster.AddInvolvementType("referring", StudentName)
-	StudentNaming := CDMModellingBusPoster.AddRelationType("Student Naming", StudentReferred, StudentNameReferring)
-	CDMModellingBusPoster.AddRelationTypeReading(StudentNaming, "", StudentReferred, "has", StudentNameReferring, "")
-	CDMModellingBusPoster.AddRelationTypeReading(StudentNaming, "", StudentNameReferring, "of", StudentReferred, "")
+	StudentReferred := CDMModel.AddInvolvementType("referred", Student)
+	StudentNameReferring := CDMModel.AddInvolvementType("referring", StudentName)
+	StudentNaming := CDMModel.AddRelationType("Student Naming", StudentReferred, StudentNameReferring)
+	CDMModel.AddRelationTypeReading(StudentNaming, "", StudentReferred, "has", StudentNameReferring, "")
+	CDMModel.AddRelationTypeReading(StudentNaming, "", StudentNameReferring, "of", StudentReferred, "")
 
-	StudyProgrammeReferred := CDMModellingBusPoster.AddInvolvementType("referred", StudyProgramme)
-	StudyProgrammeNameReferring := CDMModellingBusPoster.AddInvolvementType("referring", StudyProgrammeName)
-	StudyProgrammeNaming := CDMModellingBusPoster.AddRelationType("Programme Naming", StudyProgrammeReferred, StudyProgrammeNameReferring)
-	CDMModellingBusPoster.AddRelationTypeReading(StudyProgrammeNaming, "", StudyProgrammeReferred, "goes by", StudyProgrammeNameReferring, "")
-	CDMModellingBusPoster.AddRelationTypeReading(StudyProgrammeNaming, "", StudyProgrammeNameReferring, "of", StudyProgrammeReferred, "")
-	CDMModellingBusPoster.SetModelName("University")
+	StudyProgrammeReferred := CDMModel.AddInvolvementType("referred", StudyProgramme)
+	StudyProgrammeNameReferring := CDMModel.AddInvolvementType("referring", StudyProgrammeName)
+	StudyProgrammeNaming := CDMModel.AddRelationType("Programme Naming", StudyProgrammeReferred, StudyProgrammeNameReferring)
+	CDMModel.AddRelationTypeReading(StudyProgrammeNaming, "", StudyProgrammeReferred, "goes by", StudyProgrammeNameReferring, "")
+	CDMModel.AddRelationTypeReading(StudyProgrammeNaming, "", StudyProgrammeNameReferring, "of", StudyProgrammeReferred, "")
+	CDMModel.SetModelName("University")
 
 	fmt.Println("4) larger model")
-	CDMModellingBusPoster.PostUpdate()
+	CDMModellingBusPoster.PostUpdate(CDMModel)
 	fmt.Println("Posted update")
 	Pause()
 
@@ -112,5 +113,5 @@ func main() {
 	// push_update
 
 	fmt.Println("5) final model")
-	CDMModellingBusPoster.PostState()
+	CDMModellingBusPoster.PostState(CDMModel)
 }

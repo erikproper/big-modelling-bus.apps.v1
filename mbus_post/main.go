@@ -41,7 +41,7 @@ var (
 		coordinationPosting + "."
 
 	configFlag      = flag.String("config", defaultIni, "Configuration file")
-	reportLevelFlag = flag.Int("reporting", 1, "Reporting level")
+	reportLevelFlag = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level")
 	topicFlag       = flag.String("topic", "", "Topic path")
 	postingKindFlag = flag.String("kind", "", postingKindExplain)
 	fileFlag        = flag.String("file", "", "File to post")
@@ -78,9 +78,9 @@ func getJSONPayload() ([]byte, bool) {
 func handleRawArtefactPosting() {
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Raw artefact posting")
 
-	modellingBusArtefactPoster := connect.CreateModellingBusArtefactConnector(modellingBusConnector, *jsonVersionFlag)
+	modellingBusArtefactPoster := connect.CreateModellingBusArtefactConnector(modellingBusConnector, *jsonVersionFlag, *artefactIDFlag)
 
-	modellingBusArtefactPoster.PrepareForPosting(*artefactIDFlag)
+	// modellingBusArtefactPoster.PrepareForPosting(*artefactIDFlag)
 
 	if len(*fileFlag) == 0 {
 		modellingBusConnector.Reporter.Error("No file specified for raw artefact posting.")
@@ -106,12 +106,12 @@ func handleJSONArtefactPosting() {
 		return
 	}
 
-	modellingBusArtefactPoster := connect.CreateModellingBusArtefactConnector(modellingBusConnector, *jsonVersionFlag)
+	modellingBusArtefactPoster := connect.CreateModellingBusArtefactConnector(modellingBusConnector, *jsonVersionFlag, *artefactIDFlag)
 
-	modellingBusArtefactPoster.PrepareForPosting(*artefactIDFlag)
+	// modellingBusArtefactPoster.PrepareForPosting(*artefactIDFlag)
 
 	if jsonPayload, ok := getJSONPayload(); ok {
-		modellingBusArtefactPoster.PostJSONArtefactState(jsonPayload, nil)
+		modellingBusArtefactPoster.PostJSONArtefactState(jsonPayload, ok)
 	}
 }
 
@@ -128,25 +128,25 @@ func handleRawObservationPosting() {
 }
 
 func handleJSONObservationPosting() {
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "JSON observation posting")
-
 	if jsonPayload, ok := getJSONPayload(); ok {
+		modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "JSON observation posting")
+
 		modellingBusConnector.PostJSONObservation(*topicFlag, jsonPayload)
 	}
 }
 
 func handleStreamedObservationPosting() {
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "JSON observation posting")
-
 	if jsonPayload, ok := getJSONPayload(); ok {
+		modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Streamed observation posting")
+
 		modellingBusConnector.PostStreamedObservation(*topicFlag, jsonPayload)
 	}
 }
 
 func handleCoordinationPosting() {
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Coordination posting")
-
 	if jsonPayload, ok := getJSONPayload(); ok {
+		modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Coordination posting")
+
 		modellingBusConnector.PostCoordination(*topicFlag, jsonPayload)
 	}
 }
@@ -155,7 +155,9 @@ func main() {
 	flag.Parse()
 
 	reporter := generics.CreateReporter(*reportLevelFlag, ReportError, ReportProgress)
+
 	configData := generics.LoadConfig(*configFlag, reporter)
+
 	modellingBusConnector = connect.CreateModellingBusConnector(configData, reporter, connect.PostingOnly)
 
 	if len(*topicFlag) == 0 {
