@@ -30,6 +30,7 @@ import (
 /*
  * Defining key constants
  */
+
 const (
 	defaultIni          = "config.ini"
 	latexFileExtension  = ".tex"
@@ -39,6 +40,7 @@ const (
 /*
  * Defining flags
  */
+
 var (
 	configFlag      = flag.String("config", defaultIni, "Configuration file")
 	reportLevelFlag = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level")
@@ -49,6 +51,7 @@ var (
 /*
  * Defining the CDM model LaTeX writer
  */
+
 type TCDMModelLaTeXWriter struct {
 	cdm.TCDMModelListener // The CDM model listener
 
@@ -64,6 +67,7 @@ type TCDMModelLaTeXWriter struct {
 /*
  *  String constants for LaTeX formatting
  */
+
 const (
 	toAdd          = "{\\color{green} %s}"
 	toDelete       = "{\\color{red} \\sout{\\sout{%s}}}"
@@ -302,21 +306,6 @@ func (l *TCDMModelLaTeXWriter) CreatePDF() {
 	cmd.Run()
 }
 
-func CreateCDMLaTeXWriter(configData *generics.TConfigData, modelListener cdm.TCDMModelListener, reporter *generics.TReporter) TCDMModelLaTeXWriter {
-	// Creating the CDM model LaTeX writer
-	CDMModelLaTeXWriter := TCDMModelLaTeXWriter{}
-	CDMModelLaTeXWriter.reporter = reporter
-	CDMModelLaTeXWriter.TCDMModelListener = modelListener
-
-	// Setting up the LaTeX writer based on the config data
-	CDMModelLaTeXWriter.workFolder = configData.GetValue("", "work_folder").String()
-	CDMModelLaTeXWriter.latexFile = configData.GetValue("", "latex").String()
-	CDMModelLaTeXWriter.latexCommand = configData.GetValue("", "latex_command").StringWithDefault(latexDefaultCommand)
-
-	// Returning the created LaTeX writer
-	return CDMModelLaTeXWriter
-}
-
 // Updating the rendering based on the current model state
 func (l *TCDMModelLaTeXWriter) UpdateRendering(message string) {
 	// Reporting on the update
@@ -329,6 +318,7 @@ func (l *TCDMModelLaTeXWriter) UpdateRendering(message string) {
 	l.CreatePDF()
 }
 
+// Setting up listening for model postings
 func (l *TCDMModelLaTeXWriter) ListenForModelPostings(agentID, modelID string) {
 	// Listening for model state postings
 	l.ListenForModelStatePostings(agentID, modelID, func() {
@@ -344,6 +334,22 @@ func (l *TCDMModelLaTeXWriter) ListenForModelPostings(agentID, modelID string) {
 	l.ListenForModelConsideringPostings(agentID, modelID, func() {
 		l.UpdateRendering("Received considered.")
 	})
+}
+
+// Creating the CDM model LaTeX writer
+func CreateCDMLaTeXWriter(configData *generics.TConfigData, modelListener cdm.TCDMModelListener, reporter *generics.TReporter) TCDMModelLaTeXWriter {
+	// Creating the CDM model LaTeX writer
+	CDMModelLaTeXWriter := TCDMModelLaTeXWriter{}
+	CDMModelLaTeXWriter.reporter = reporter
+	CDMModelLaTeXWriter.TCDMModelListener = modelListener
+
+	// Setting up the LaTeX writer based on the config data
+	CDMModelLaTeXWriter.workFolder = configData.GetValue("", "work_folder").String()
+	CDMModelLaTeXWriter.latexFile = configData.GetValue("", "latex").String()
+	CDMModelLaTeXWriter.latexCommand = configData.GetValue("", "latex_command").StringWithDefault(latexDefaultCommand)
+
+	// Returning the created LaTeX writer
+	return CDMModelLaTeXWriter
 }
 
 /*

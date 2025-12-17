@@ -1,4 +1,4 @@
-module example/user/model_poster
+module cdm_test_poster
 
 go 1.24.0
 

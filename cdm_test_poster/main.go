@@ -1,3 +1,19 @@
+/*
+ *
+ * Module:      BIG Modelling Bus Apps, Version 1
+ * Package:     Modelling Bus Apps
+ * Application: Poster for CDM Models, Version 1
+ *
+ * For now, this is just a simple poster application for CDM models
+ * As a next step, this application can be extended to be able to read ASCII based
+ * CDM models from files, and post them on the modelling bus.
+ *
+ * Creator: Henderik A. Proper (e.proper@acm.org), TU Wien, Austria
+ *
+ * Version of: 16.12.2025
+ *
+ */
+
 package main
 
 import (
@@ -11,20 +27,36 @@ import (
 	cdm "github.com/erikproper/big-modelling-bus.go.v1/languages/cdm/cdm_v1_0_v1_0"
 )
 
+/*
+ * Defining constants
+ */
+
 const (
 	defaultIni = "config.ini"
 )
+
+/*
+ * Defining flags
+ */
 
 var (
 	configFlag      = flag.String("config", defaultIni, "Configuration file")
 	reportLevelFlag = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level")
 )
 
+/*
+ * Pausing during posting. Just needed for testing purposes.
+ */
+
 func Pause() {
 	fmt.Println("Press any key")
 	input := bufio.NewScanner(os.Stdin)
 	input.Scan()
 }
+
+/*
+ * Reporting progress and errors
+ */
 
 func ReportProgress(message string) {
 	fmt.Println("PROGRESS:", message)
@@ -34,7 +66,12 @@ func ReportError(message string) {
 	fmt.Println("ERROR:", message)
 }
 
+/*
+ * Main function
+ */
+
 func main() {
+	// Parsing command line flags
 	flag.Parse()
 
 	reporter := generics.CreateReporter(*reportLevelFlag, ReportError, ReportProgress)
