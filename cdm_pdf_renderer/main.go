@@ -32,9 +32,9 @@ import (
  */
 
 const (
-	defaultIni          = "config.ini"
-	latexFileExtension  = ".tex"
-	latexDefaultCommand = "pdflatex"
+	defaultIni          = "config.ini" // Default configuration file name
+	latexFileExtension  = ".tex"       // LaTeX file extension
+	latexDefaultCommand = "pdflatex"   // Default LaTeX command
 )
 
 /*
@@ -42,10 +42,10 @@ const (
  */
 
 var (
-	configFlag      = flag.String("config", defaultIni, "Configuration file")
-	reportLevelFlag = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level")
-	modelIDFlag     = flag.String("for_model", "", "Model ID to listen for")
-	agentIDFlag     = flag.String("from_agent", "", "Agent ID to listen to")
+	configFlag      = flag.String("config", defaultIni, "Configuration file")               // Configuration file flag
+	reportLevelFlag = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level") // Reporting level flag
+	modelIDFlag     = flag.String("for_model", "", "Model ID to listen for")                // Model ID to listen for flag
+	agentIDFlag     = flag.String("from_agent", "", "Agent ID to listen to")                // Agent ID to listen to flag
 )
 
 /*
@@ -148,15 +148,19 @@ func (l *TCDMModelLaTeXWriter) RenderTypeName(typeID string) string {
 // Render a relation type reading
 func (l *TCDMModelLaTeXWriter) RenderRelationTypeReading(m cdm.TCDMModel, reading string) string {
 	readingString := ""
+	// Building up the reading string
 	for involvementPosition, involvementType := range m.ReadingDefinition[reading].InvolvementTypes {
 		if involvementPosition == 0 {
 			readingString += m.ReadingDefinition[reading].ReadingElements[involvementPosition]
 		}
+
 		readingString += " " +
 			m.TypeName[m.BaseTypeOfInvolvementType[involvementType]] +
 			" $\\{$ " + m.TypeName[involvementType] + " $\\}$ " +
 			m.ReadingDefinition[reading].ReadingElements[involvementPosition+1]
 	}
+
+	// Returning the built reading string
 	return strings.TrimSpace(readingString)
 }
 
@@ -376,23 +380,12 @@ func main() {
 	reporter := generics.CreateReporter(*reportLevelFlag, ReportError, ReportProgress)
 
 	// Validating agent ID flag
-	if len(*agentIDFlag) == 0 {
-		reporter.Error("No agent ID specified.")
-
-		return
-	}
-
-	// Validating agent ID flag
-	if len(*agentIDFlag) == 0 {
-		reporter.Error("No agent ID specified.")
-
+	if reporter.MaybeReportEmptyFlagError(agentIDFlag, "No agent ID specified.") {
 		return
 	}
 
 	// Validating model ID flag
-	if len(*modelIDFlag) == 0 {
-		reporter.Error("No model ID specified.")
-
+	if reporter.MaybeReportEmptyFlagError(modelIDFlag, "No model ID specified.") {
 		return
 	}
 

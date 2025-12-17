@@ -32,7 +32,7 @@ import (
  */
 
 const (
-	defaultIni = "config.ini"
+	defaultIni = "config.ini" // Default configuration file name
 )
 
 /*
@@ -40,8 +40,8 @@ const (
  */
 
 var (
-	configFlag      = flag.String("config", defaultIni, "Configuration file")
-	reportLevelFlag = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level")
+	configFlag      = flag.String("config", defaultIni, "Configuration file")               // Configuration file flag
+	reportLevelFlag = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level") // Reporting level flag
 )
 
 /*
