@@ -1,4 +1,4 @@
-module example/user/mbus_post
+module mbus_post
 
 go 1.24.0
 
