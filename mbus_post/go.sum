@@ -40,6 +40,8 @@ github.com/erikproper/big-modelling-bus.go.v1 v1.0.24 h1:5p75czFR4h+qPczh+PAQDNH
 github.com/erikproper/big-modelling-bus.go.v1 v1.0.24/go.mod h1:G2TE4u38aq1qm89dG5j0vec2276rIqreDLbWDtYGQVM=
 github.com/erikproper/big-modelling-bus.go.v1 v1.0.30 h1:8amVvfO+MLdY0S7a0radYh5D4qUTVEDGU25IF2lqHTE=
 github.com/erikproper/big-modelling-bus.go.v1 v1.0.30/go.mod h1:G2TE4u38aq1qm89dG5j0vec2276rIqreDLbWDtYGQVM=
+github.com/erikproper/big-modelling-bus.go.v1 v1.0.31 h1:NzcfDavZfWM9L5uynaN/KRtLLhvER1EQyoSVdahZUyg=
+github.com/erikproper/big-modelling-bus.go.v1 v1.0.31/go.mod h1:G2TE4u38aq1qm89dG5j0vec2276rIqreDLbWDtYGQVM=
 github.com/evanphx/json-patch v0.5.2 h1:xVCHIVMUu1wtM/VkR9jVZ45N3FhZfYMMYGorLCR8P3k=
 github.com/evanphx/json-patch v0.5.2/go.mod h1:ZWS5hhDbVDyob71nXKNL0+PWn6ToqBHMikGIFbs31qQ=
 github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=

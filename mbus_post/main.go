@@ -2,9 +2,10 @@
  *
  * Module:      BIG Modelling Bus Apps, Version 1
  * Package:     Modelling Bus Apps
- * Application: XX
+ * Application: Generic Poster for the Modelling Bus, Version 1
  *
- * XXXX
+ * This is a generic poster application for the modelling bus.
+ * It can post different kinds of artefacts, observations, and coordination messages.
  *
  * Creator: Henderik A. Proper (e.proper@acm.org), TU Wien, Austria
  *
@@ -16,7 +17,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 
 	"github.com/erikproper/big-modelling-bus.go.v1/connect"
@@ -30,12 +30,12 @@ import (
 const (
 	defaultIni = "config.ini" // Default configuration file name
 
-	rawArtefactPosting         = "raw_artefact"         // Raw artefact posting kinds
-	jsonArtefactPosting        = "json_artefact"        // JSON artefact posting kinds
-	rawObservationPosting      = "raw_observation"      // Raw observation posting kinds
-	jsonObservationPosting     = "json_observation"     // JSON observation posting kinds
+	rawArtefactPosting         = "raw_artefact"         // Raw artefact posting kind
+	jsonArtefactPosting        = "json_artefact"        // JSON artefact posting kind
+	rawObservationPosting      = "raw_observation"      // Raw observation posting kind
+	jsonObservationPosting     = "json_observation"     // JSON observation posting kind
 	streamedObservationPosting = "streamed_observation" // Streamed observation posting kinds
-	coordinationPosting        = "coordination"         // Coordination posting kinds
+	coordinationPosting        = "coordination"         // Coordination posting kind
 )
 
 /*
@@ -64,14 +64,15 @@ var (
 		streamedObservationPosting + ", or " +
 		coordinationPosting + "."
 
-	configFlag      = flag.String("config", defaultIni, "Configuration file")                   // Configuration file flag
-	reportLevelFlag = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level")     // Reporting level flag
-	topicFlag       = flag.String("topic", "", "Topic path")                                    // Topic path flag
-	postingKindFlag = flag.String("kind", "", postingKindExplain)                               // Posting kind flag
-	fileFlag        = flag.String("file", "", "File to post")                                   // File to post flag
-	jsonFlag        = flag.String("json", "", "JSON content to post")                           // JSON content to post flag
-	jsonVersionFlag = flag.String("json_version", "", "JSON version of JSON artefact content.") // JSON version flag
-	artefactIDFlag  = flag.String("artefact_id", "", "Artefact ID of JSON artefact content.")   // Artefact ID flag
+	configFlag            = flag.String("config", defaultIni, "Configuration file")                  // Configuration file flag
+	reportLevelFlag       = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level")    // Reporting level flag
+	observationIDFlag     = flag.String("observation_id", "", "Observation ID")                      // Observation ID flag
+	coordinationTopicFlag = flag.String("coordination_topic", "", "Coordination topic path")         // Coordination topic path flag
+	postingKindFlag       = flag.String("kind", "", postingKindExplain)                              // Posting kind flag
+	fileFlag              = flag.String("file", "", "File to post")                                  // File to post flag
+	jsonFlag              = flag.String("json", "", "JSON content to post")                          // JSON content to post flag
+	jsonVersionFlag       = flag.String("json_version", "", "JSON version of JSON artefact content") // JSON version flag
+	artefactIDFlag        = flag.String("artefact_id", "", "Artefact ID")                            // Artefact ID flag
 )
 
 /*
@@ -109,14 +110,19 @@ func handleRawArtefactPosting() {
 		return
 	}
 
+	// We also need an artefact ID for artefact postings
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(artefactIDFlag, "No artefact ID specified for artefact posting.") {
+		return
+	}
+
 	// Create the modelling bus artefact poster
-	modellingBusArtefactPoster := connect.CreateModellingBusArtefactConnector(modellingBusConnector, *jsonVersionFlag, *artefactIDFlag)
+	modellingBusArtefactPoster := connect.CreateModellingBusArtefactConnector(modellingBusConnector, "", *artefactIDFlag)
 
 	// Reporting progress
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Raw artefact posting.")
 
 	// Posting the raw artefact
-	modellingBusArtefactPoster.PostRawArtefactState(*topicFlag, *fileFlag)
+	modellingBusArtefactPoster.PostRawArtefactState(*fileFlag)
 }
 
 // Handling JSON artefact posting
@@ -126,8 +132,8 @@ func handleJSONArtefactPosting() {
 		return
 	}
 
-	// We also need an artefact ID for JSON artefact postings
-	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(artefactIDFlag, "No artefact ID specified for JSON artefact posting.") {
+	// We also need an artefact ID for artefact postings
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(artefactIDFlag, "No artefact ID specified for artefact posting.") {
 		return
 	}
 
@@ -156,15 +162,25 @@ func handleRawObservationPosting() {
 		return
 	}
 
+	// We must have a topic path
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No topic path specified.") {
+		return
+	}
+
 	// Reporting progress
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Raw observation posting.")
 
 	// Posting the raw observation
-	modellingBusConnector.PostRawObservation(*topicFlag, *fileFlag)
+	modellingBusConnector.PostRawObservation(*observationIDFlag, *fileFlag)
 }
 
 // Handling JSON observation posting
 func handleJSONObservationPosting() {
+	// We must have an observation ID
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No topic path specified.") {
+		return
+	}
+
 	// Getting the JSON payload
 	jsonPayload, ok := getJSONPayload()
 
@@ -177,11 +193,16 @@ func handleJSONObservationPosting() {
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "JSON observation posting.")
 
 	// Posting the JSON observation
-	modellingBusConnector.PostJSONObservation(*topicFlag, jsonPayload)
+	modellingBusConnector.PostJSONObservation(*observationIDFlag, jsonPayload)
 }
 
 // Handling streamed observation posting
 func handleStreamedObservationPosting() {
+	// We must have an observation ID
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No topic path specified.") {
+		return
+	}
+
 	// Getting the JSON payload
 	jsonPayload, ok := getJSONPayload()
 
@@ -194,10 +215,15 @@ func handleStreamedObservationPosting() {
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Streamed observation posting.")
 
 	// Posting the streamed observation
-	modellingBusConnector.PostStreamedObservation(*topicFlag, jsonPayload)
+	modellingBusConnector.PostStreamedObservation(*observationIDFlag, jsonPayload)
 }
 
 func handleCoordinationPosting() {
+	// We must have a coordination topic
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(coordinationTopicFlag, "No coordination topic specified.") {
+		return
+	}
+
 	// Getting the JSON payload
 	jsonPayload, ok := getJSONPayload()
 
@@ -210,19 +236,7 @@ func handleCoordinationPosting() {
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Coordination posting.")
 
 	// Posting the coordination
-	modellingBusConnector.PostCoordination(*topicFlag, jsonPayload)
-}
-
-/*
- * Reporting progress and errors
- */
-
-func ReportProgress(message string) {
-	fmt.Println("PROGRESS:", message)
-}
-
-func ReportError(message string) {
-	fmt.Println("ERROR:", message)
+	modellingBusConnector.PostCoordination(*coordinationTopicFlag, jsonPayload)
 }
 
 /*
@@ -234,18 +248,13 @@ func main() {
 	flag.Parse()
 
 	// Creating the reporter
-	reporter := generics.CreateReporter(*reportLevelFlag, ReportError, ReportProgress)
+	reporter := generics.CreateReporter(*reportLevelFlag, generics.ReportError, generics.ReportProgress)
 
 	// Loading the configuration
 	configData := generics.LoadConfig(*configFlag, reporter)
 
 	// Creating the Modelling Bus Connector
 	modellingBusConnector = connect.CreateModellingBusConnector(configData, reporter, connect.PostingOnly)
-
-	// We must have a topic path
-	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(topicFlag, "No topic path specified.") {
-		return
-	}
 
 	// We must have a posting kind
 	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(postingKindFlag, "No posting kind specified.") {
