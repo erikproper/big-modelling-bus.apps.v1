@@ -55,18 +55,6 @@ func Pause() {
 }
 
 /*
- * Reporting progress and errors
- */
-
-func ReportProgress(message string) {
-	fmt.Println("PROGRESS:", message)
-}
-
-func ReportError(message string) {
-	fmt.Println("ERROR:", message)
-}
-
-/*
  * Main function
  */
 
@@ -74,7 +62,7 @@ func main() {
 	// Parsing command line flags
 	flag.Parse()
 
-	reporter := generics.CreateReporter(*reportLevelFlag, ReportError, ReportProgress)
+	reporter := generics.CreateReporter(*reportLevelFlag, generics.ReportError, generics.ReportProgress)
 
 	// Note: the config data can be used to contain config data for different aspects
 	configData := generics.LoadConfig(*configFlag, reporter)

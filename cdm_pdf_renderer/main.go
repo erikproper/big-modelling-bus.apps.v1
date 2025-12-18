@@ -357,18 +357,6 @@ func CreateCDMLaTeXWriter(configData *generics.TConfigData, modelListener cdm.TC
 }
 
 /*
- * Reporting progress and errors
- */
-
-func ReportProgress(message string) {
-	fmt.Println("PROGRESS:", message)
-}
-
-func ReportError(message string) {
-	fmt.Println("ERROR:", message)
-}
-
-/*
  * Main function
  */
 
@@ -377,7 +365,7 @@ func main() {
 	flag.Parse()
 
 	// Creating the reporter
-	reporter := generics.CreateReporter(*reportLevelFlag, ReportError, ReportProgress)
+	reporter := generics.CreateReporter(*reportLevelFlag, generics.ReportError, generics.ReportProgress)
 
 	// Validating agent ID flag
 	if reporter.MaybeReportEmptyFlagError(agentIDFlag, "No agent ID specified.") {
