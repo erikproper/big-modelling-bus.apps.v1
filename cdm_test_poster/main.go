@@ -62,12 +62,13 @@ func main() {
 	// Parsing command line flags
 	flag.Parse()
 
+	// Creating the reporter
 	reporter := generics.CreateReporter(*reportLevelFlag, generics.ReportError, generics.ReportProgress)
 
-	// Note: the config data can be used to contain config data for different aspects
+	// Loading the configuration
 	configData := generics.LoadConfig(*configFlag, reporter)
 
-	// Note: One ModellingBusConnector can be used for different models of different kinds.
+	// Creating the Modelling Bus Connector
 	ModellingBusConnector := connect.CreateModellingBusConnector(configData, reporter, connect.PostingOnly)
 
 	//	ModellingBusConnector.DeleteEnvironment("experiment-12.10.2025")
