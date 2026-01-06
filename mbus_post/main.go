@@ -163,7 +163,7 @@ func handleRawObservationPosting() {
 	}
 
 	// We must have a topic path
-	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No topic path specified.") {
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No observation ID specified.") {
 		return
 	}
 
@@ -177,7 +177,7 @@ func handleRawObservationPosting() {
 // Handling JSON observation posting
 func handleJSONObservationPosting() {
 	// We must have an observation ID
-	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No topic path specified.") {
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No observation ID specified.") {
 		return
 	}
 
@@ -199,7 +199,7 @@ func handleJSONObservationPosting() {
 // Handling streamed observation posting
 func handleStreamedObservationPosting() {
 	// We must have an observation ID
-	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No topic path specified.") {
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No observation ID specified.") {
 		return
 	}
 
