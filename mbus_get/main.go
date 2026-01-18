@@ -18,6 +18,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/erikproper/big-modelling-bus.go.v1/connect"
 	"github.com/erikproper/big-modelling-bus.go.v1/generics"
@@ -77,6 +78,8 @@ var (
 	retrievalKindFlag     = flag.String("kind", "", retrievalKindExplain)                            // Retrieval kind flag
 	jsonVersionFlag       = flag.String("json_version", "", "JSON version of JSON artefact content") // JSON version flag
 	artefactIDFlag        = flag.String("artefact_id", "", "Artefact ID")                            // Artefact ID flag
+	waitFlag              = flag.Bool("wait", false, "wait for a posting")                           // Wait flag
+	waitModeFlag          = flag.String("wait_mode", "", "wait mode when waiting for a posting")     // Wait mode flag
 )
 
 /*
@@ -84,10 +87,8 @@ var (
  */
 
 // Write timestamp to a file
-func writeTimestampToFile(timestamp, fileBaseName string) {
-	filePath := filepath.FromSlash(localFilePath + "/" + fileBaseName + timestampExtension)
-
-	if err := os.WriteFile(filePath, []byte(timestamp), 0644); err != nil {
+func writeTimestampToFile(timestamp, filePath string) {
+	if err := os.WriteFile(filePath+timestampExtension, []byte(timestamp), 0644); err != nil {
 		// Reporting error
 		modellingBusConnector.Reporter.ReportError("Error writing to timestamp file:", err)
 	}
@@ -109,10 +110,31 @@ func SaveJSONToFile(jsonContent []byte, timestamp, kind string) {
 	}
 
 	// Write timestamp to a file
-	writeTimestampToFile(timestamp, fileBaseName)
+	writeTimestampToFile(timestamp, filePath)
 
 	// Reporting progress
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Retrieved JSON artefact for %s as: %s", kind, filePath)
+}
+
+// Deferred or immediate retrieval
+func deferredOrImmediate(progress string, deferredHandler func(*bool), immediateHandler func()) {
+	if *waitFlag {
+		// Reporting progress
+		modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Deferred %s retrieval.", progress)
+
+		finished := false
+
+		deferredHandler(&finished)
+
+		for !finished {
+			time.Sleep(1 * time.Second)
+		}
+	} else {
+		// Reporting progress
+		modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Immediate %s retrieval.", progress)
+
+		immediateHandler()
+	}
 }
 
 /*
@@ -126,20 +148,38 @@ func handleRawArtefactRetrieval() {
 		return
 	}
 
+	// We must also have an agent ID
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(agentIDFlag, "No agent ID specified.") {
+		return
+	}
+
 	// Create the modelling bus artefact retriever
 	modellingBusArtefactRetriever := connect.CreateModellingBusArtefactConnector(modellingBusConnector, "", *artefactIDFlag)
 
-	// Reporting progress
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Raw artefact retrieval.")
+	// Deferred or immediate variation
+	deferredOrImmediate("raw artefact",
+		func(finished *bool) {
+			// Deferr for a raw artefact state posting
+			modellingBusArtefactRetriever.ListenForRawArtefactStatePostings(*agentIDFlag, *artefactIDFlag, *fileNameFlag, func(filePath string, timestamp string) {
+				// Write timestamp to a file
+				writeTimestampToFile(timestamp, filePath)
 
-	// Retrieving the raw artefact
-	filePath, timestamp := modellingBusArtefactRetriever.GetRawArtefact(*agentIDFlag, *artefactIDFlag, *fileNameFlag)
+				// Reporting progress
+				modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Retrieved raw artefact as: %s", filePath)
 
-	// timestampFileNameFlag
-	writeTimestampToFile(timestamp, *fileNameFlag)
+				*finished = true
+			})
+		},
+		func() {
+			// Retrieving the raw artefact
+			filePath, timestamp := modellingBusArtefactRetriever.GetRawArtefact(*agentIDFlag, *artefactIDFlag, *fileNameFlag)
 
-	// Reporting progress
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Retrieved raw artefact as: %s", filePath)
+			// Write timestamp to a file
+			writeTimestampToFile(timestamp, filePath)
+
+			// Reporting progress
+			modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Retrieved raw artefact as: %s", filePath)
+		})
 }
 
 // Handler for JSON artefact retrieval
@@ -149,26 +189,77 @@ func handleJSONArtefactRetrieval() {
 		return
 	}
 
+	// We must also have an agent ID
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(agentIDFlag, "No agent ID specified.") {
+		return
+	}
+
 	// We also need an artefact ID for artefact retrievals
 	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(artefactIDFlag, "No artefact ID specified for artefact retrieval.") {
 		return
 	}
 
-	// Reporting progress
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "JSON artefact retrieval.")
-
 	// Create the modelling bus artefact retriever
 	modellingBusArtefactRetriever := connect.CreateModellingBusArtefactConnector(modellingBusConnector, *jsonVersionFlag, *artefactIDFlag)
 
-	// Retrieving the JSON artefact state, update, and considering
-	modellingBusArtefactRetriever.GetJSONArtefactState(*agentIDFlag, *artefactIDFlag)
-	modellingBusArtefactRetriever.GetJSONArtefactUpdate(*agentIDFlag, *artefactIDFlag)
-	modellingBusArtefactRetriever.GetJSONArtefactConsidering(*agentIDFlag, *artefactIDFlag)
+	deferredOrImmediate("JSON artefact",
+		func(finished *bool) {
+			if *waitModeFlag == "state" {
+				modellingBusArtefactRetriever.ListenForJSONArtefactStatePostings(*agentIDFlag, *artefactIDFlag, func() {
+					SaveJSONToFile(modellingBusArtefactRetriever.CurrentContent, modellingBusArtefactRetriever.CurrentTimestamp, "state")
+					*finished = true
+				})
+				modellingBusArtefactRetriever.ListenForJSONArtefactUpdatePostings(*agentIDFlag, *artefactIDFlag, func() {})
+				modellingBusArtefactRetriever.ListenForJSONArtefactConsideringPostings(*agentIDFlag, *artefactIDFlag, func() {})
 
-	// Save JSONs to files
-	SaveJSONToFile(modellingBusArtefactRetriever.CurrentContent, modellingBusArtefactRetriever.CurrentTimestamp, "state")
-	SaveJSONToFile(modellingBusArtefactRetriever.UpdatedContent, modellingBusArtefactRetriever.UpdatedTimestamp, "update")
-	SaveJSONToFile(modellingBusArtefactRetriever.ConsideredContent, modellingBusArtefactRetriever.ConsideredTimestamp, "considered")
+			} else if *waitModeFlag == "update" {
+				modellingBusArtefactRetriever.ListenForJSONArtefactStatePostings(*agentIDFlag, *artefactIDFlag, func() {})
+				modellingBusArtefactRetriever.ListenForJSONArtefactUpdatePostings(*agentIDFlag, *artefactIDFlag, func() {
+					SaveJSONToFile(modellingBusArtefactRetriever.UpdatedContent, modellingBusArtefactRetriever.UpdatedTimestamp, "update")
+					*finished = true
+				})
+				modellingBusArtefactRetriever.ListenForJSONArtefactConsideringPostings(*agentIDFlag, *artefactIDFlag, func() {})
+
+			} else if *waitModeFlag == "considering" {
+				modellingBusArtefactRetriever.ListenForJSONArtefactStatePostings(*agentIDFlag, *artefactIDFlag, func() {})
+				modellingBusArtefactRetriever.ListenForJSONArtefactUpdatePostings(*agentIDFlag, *artefactIDFlag, func() {})
+				modellingBusArtefactRetriever.ListenForJSONArtefactConsideringPostings(*agentIDFlag, *artefactIDFlag, func() {
+					SaveJSONToFile(modellingBusArtefactRetriever.ConsideredContent, modellingBusArtefactRetriever.ConsideredTimestamp, "considered")
+					*finished = true
+				})
+
+			} else {
+				modellingBusArtefactRetriever.ListenForJSONArtefactStatePostings(*agentIDFlag, *artefactIDFlag, func() {
+					SaveJSONToFile(modellingBusArtefactRetriever.CurrentContent, modellingBusArtefactRetriever.CurrentTimestamp, "state")
+					SaveJSONToFile(modellingBusArtefactRetriever.UpdatedContent, modellingBusArtefactRetriever.UpdatedTimestamp, "update")
+					SaveJSONToFile(modellingBusArtefactRetriever.ConsideredContent, modellingBusArtefactRetriever.ConsideredTimestamp, "considered")
+					*finished = true
+				})
+				modellingBusArtefactRetriever.ListenForJSONArtefactUpdatePostings(*agentIDFlag, *artefactIDFlag, func() {
+					SaveJSONToFile(modellingBusArtefactRetriever.CurrentContent, modellingBusArtefactRetriever.CurrentTimestamp, "state")
+					SaveJSONToFile(modellingBusArtefactRetriever.UpdatedContent, modellingBusArtefactRetriever.UpdatedTimestamp, "update")
+					SaveJSONToFile(modellingBusArtefactRetriever.ConsideredContent, modellingBusArtefactRetriever.ConsideredTimestamp, "considered")
+					*finished = true
+				})
+				modellingBusArtefactRetriever.ListenForJSONArtefactConsideringPostings(*agentIDFlag, *artefactIDFlag, func() {
+					SaveJSONToFile(modellingBusArtefactRetriever.CurrentContent, modellingBusArtefactRetriever.CurrentTimestamp, "state")
+					SaveJSONToFile(modellingBusArtefactRetriever.UpdatedContent, modellingBusArtefactRetriever.UpdatedTimestamp, "update")
+					SaveJSONToFile(modellingBusArtefactRetriever.ConsideredContent, modellingBusArtefactRetriever.ConsideredTimestamp, "considered")
+					*finished = true
+				})
+			}
+		},
+		func() {
+			// Retrieving the JSON artefact state, update, and considering
+			modellingBusArtefactRetriever.GetJSONArtefactState(*agentIDFlag, *artefactIDFlag)
+			modellingBusArtefactRetriever.GetJSONArtefactUpdate(*agentIDFlag, *artefactIDFlag)
+			modellingBusArtefactRetriever.GetJSONArtefactConsidering(*agentIDFlag, *artefactIDFlag)
+
+			// Save JSONs to files
+			SaveJSONToFile(modellingBusArtefactRetriever.CurrentContent, modellingBusArtefactRetriever.CurrentTimestamp, "state")
+			SaveJSONToFile(modellingBusArtefactRetriever.UpdatedContent, modellingBusArtefactRetriever.UpdatedTimestamp, "update")
+			SaveJSONToFile(modellingBusArtefactRetriever.ConsideredContent, modellingBusArtefactRetriever.ConsideredTimestamp, "considered")
+		})
 }
 
 // Handler for raw observation retrieval
@@ -178,23 +269,33 @@ func handleRawObservationRetrieval() {
 		return
 	}
 
+	// We must also have an agent ID
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(agentIDFlag, "No agent ID specified.") {
+		return
+	}
+
 	// Reporting progress
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Raw observation retrieval.")
 
 	// Retrieving the raw observation
-	fileName, timestamp := modellingBusConnector.GetRawObservation(*agentIDFlag, *observationIDFlag, *fileNameFlag)
+	filePath, timestamp := modellingBusConnector.GetRawObservation(*agentIDFlag, *observationIDFlag, *fileNameFlag)
 
 	// timestampFileNameFlag
-	writeTimestampToFile(timestamp, *fileNameFlag)
+	writeTimestampToFile(timestamp, filePath)
 
 	// Reporting progress
-	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Retrieved raw observation as: %s", fileName)
+	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Retrieved raw observation as: %s", filePath)
 }
 
 // Handler for JSON observation retrieval
 func handleJSONObservationRetrieval() {
 	// We must have an observation ID
 	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No observation ID specified.") {
+		return
+	}
+
+	// We must also have an agent ID
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(agentIDFlag, "No agent ID specified.") {
 		return
 	}
 
@@ -212,6 +313,11 @@ func handleJSONObservationRetrieval() {
 func handleStreamedObservationRetrieval() {
 	// We must have an observation ID
 	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(observationIDFlag, "No observation ID specified.") {
+		return
+	}
+
+	// We must also have an agent ID
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(agentIDFlag, "No agent ID specified.") {
 		return
 	}
 
@@ -235,8 +341,10 @@ func handleCoordinationRetrieval() {
 	// Reporting progress
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Coordination retrieval.")
 
-	// Retrieving the coordination
-	modellingBusConnector.DeleteCoordination(*coordinationTopicFlag)
+	coordination, timestamp := modellingBusConnector.GetCoordination(*coordinationTopicFlag)
+
+	// Saving the JSON observation to a file
+	SaveJSONToFile(coordination, timestamp, "")
 }
 
 /*
@@ -259,17 +367,12 @@ func main() {
 	// Creating the Modelling Bus Connector
 	modellingBusConnector = connect.CreateModellingBusConnector(configData, reporter, !connect.PostingOnly)
 
-	// We must have an agent ID
-	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(agentIDFlag, "No agent ID specified.") {
-		return
-	}
-
-	// We must have a retrieval kind
+	// We must always have a retrieval kind
 	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(retrievalKindFlag, "No retrieval kind specified.") {
 		return
 	}
 
-	// We also need an file name for retrievals
+	// We also also, always have a file name
 	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(fileNameFlag, "No file name specified for artefact retrieval.") {
 		return
 	}

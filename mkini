@@ -1,12 +1,12 @@
 #!/bin/bash
 
 function MkIni {
-  mkdir -p /tmp/cdm-$3
+  mkdir -p /tmp/$3
 
   (
     echo "environment        = \"cdm-hello-world\""
-    echo "agent              = \"cdm-$3\""
-    echo "work_folder        = \"/tmp/cdm-$3\""
+    echo "agent              = \"$3\""
+    echo "work_folder        = \"/tmp/$3\""
     echo "latex              = \"test\""
     echo ""
     echo "[ftp]"
@@ -28,10 +28,21 @@ function MkIni {
   ) > $1.ini
 }
 
+function MkInis {
+  MkIni $1/config   localhost               $2 false false
+  MkIni $1/home     frame.fritz.box         $2 false false
+  MkIni $1/tuwien   dm-lab.big.tuwien.ac.at $2 false true
+}
+
 for m in *; do
   if [ -d "$m" ]; then
-    MkIni $m/config   localhost               tester false false
-    MkIni $m/home     frame.fritz.box         tester false false
-    MkIni $m/tuwien   dm-lab.big.tuwien.ac.at tester false true
+    rm $m/*.ini 2> /dev/null
   fi
 done
+
+MkInis cdm_pdf_renderer cdm_renderer
+MkInis cdm_test_poster  cdm_poster
+MkInis mbus_delete      mbus_deleter
+MkInis mbus_get         mbus_getter
+MkInis mbus_post        mbus_poster
+MkInis mbus_listen      mbus_listener

@@ -1,1 +1,1 @@
-cdm_pdf_rendering -from_agent cdm-tester -for_model 0001
+cdm_pdf_rendering -from_agent cdm_poster -for_model 0001

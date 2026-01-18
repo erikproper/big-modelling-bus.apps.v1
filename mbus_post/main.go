@@ -67,6 +67,7 @@ var (
 	configFlag            = flag.String("config", defaultIni, "Configuration file")                  // Configuration file flag
 	reportLevelFlag       = flag.Int("reporting", generics.ProgressLevelBasic, "Reporting level")    // Reporting level flag
 	observationIDFlag     = flag.String("observation_id", "", "Observation ID")                      // Observation ID flag
+	agentIDFlag           = flag.String("agent_id", "", "Agent ID")                                  // Agent ID flag
 	coordinationTopicFlag = flag.String("coordination_topic", "", "Coordination topic path")         // Coordination topic path flag
 	postingKindFlag       = flag.String("kind", "", postingKindExplain)                              // Posting kind flag
 	fileFlag              = flag.String("file", "", "File to post")                                  // File to post flag
@@ -219,6 +220,11 @@ func handleStreamedObservationPosting() {
 }
 
 func handleCoordinationPosting() {
+	// We must have a (target) agent ID
+	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(agentIDFlag, "No target agent ID specified.") {
+		return
+	}
+
 	// We must have a coordination topic
 	if modellingBusConnector.Reporter.MaybeReportEmptyFlagError(coordinationTopicFlag, "No coordination topic specified.") {
 		return
@@ -236,7 +242,7 @@ func handleCoordinationPosting() {
 	modellingBusConnector.Reporter.Progress(generics.ProgressLevelBasic, "Coordination posting.")
 
 	// Posting the coordination
-	modellingBusConnector.PostCoordination(*coordinationTopicFlag, jsonPayload)
+	modellingBusConnector.PostCoordination(*agentIDFlag, *coordinationTopicFlag, jsonPayload)
 }
 
 /*

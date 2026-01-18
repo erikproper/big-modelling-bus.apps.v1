@@ -2,7 +2,7 @@ module cdm_pdf_rendering
 
 go 1.24.0
 
-require github.com/erikproper/big-modelling-bus.go.v1 v1.0.31
+require github.com/erikproper/big-modelling-bus.go.v1 v1.0.32
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
