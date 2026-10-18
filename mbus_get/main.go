@@ -262,6 +262,8 @@ func handleJSONArtefactRetrieval() {
 		})
 }
 
+//// HERE with the inclusion of wait's
+
 // Handler for raw observation retrieval
 func handleRawObservationRetrieval() {
 	// We must have an observation ID

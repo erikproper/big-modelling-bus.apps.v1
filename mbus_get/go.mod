@@ -2,7 +2,7 @@ module mbus_get
 
 go 1.24.0
 
-require github.com/erikproper/big-modelling-bus.go.v1 v1.0.32
+require github.com/erikproper/big-modelling-bus.go.v1 v1.0.33
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.5.1 // indirect
@@ -15,7 +15,7 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/wI2L/jsondiff v0.7.0 // indirect
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	gopkg.in/ini.v1 v1.67.0 // indirect
+	gopkg.in/ini.v1 v1.67.1 // indirect
 )
